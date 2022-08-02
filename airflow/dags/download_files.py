@@ -1,17 +1,16 @@
-'''download_files.py
-Unpacks a dictionary containing a list which houses a file description, date in YYYY-MM format, file extension,
-and a url to download a file. Downloads files using urllib library and pushes a dictionary as a XCOM
-variable to be used to upload the files to a remote destination.
-'''
-def download_files(ti):
+import os
+import urllib.request
+
+def download_files(ti) -> None:
     '''
     Reads a dictionary containing a subject as a key, and a list stored as the value pair containing the following:
         list[0] = ******@@@@@*****  -- TO-DO: populate this description based on whether this function will be for NY taxi only
         list[1] = YYYY-MM
         list[2] = file extension
-        list[4] = url to download file
+        list[3] = url to download file
     Utilizes unpacked list values to set a path and filename before downloading the files and saving them to the local machine.
 
+    ti -- Task Instance (required for Airflow XCOM)
     '''
 
     
@@ -33,3 +32,5 @@ def download_files(ti):
         source_dest_gcs[file_name] = { 'source' : dest, 'dest' : f'{taxi_type}/{taxi_type}_{year_month}{file_ext}' }
 
     ti.xcom_push(key='gcs_path', value = source_dest_gcs)
+    
+    return None

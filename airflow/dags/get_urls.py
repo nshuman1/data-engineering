@@ -1,9 +1,21 @@
-def get_urls(ti, url, year, month):
+# get_urls.py
 
-    import requests
-    from bs4 import BeautifulSoup
-    import re
-    from collections import defaultdict
+# TO-DO: per airflow docs, imports should be contained within function
+
+import requests
+from bs4 import BeautifulSoup
+import re
+from collections import defaultdict
+
+def get_urls(ti, url: str, year: str, month: str) -> None:
+    """
+    Function to scrape NYC Taxi Data webpage for data associated to downloadable parquet files.
+    Returns None type, relevant dataset information is pushed via XCOM.
+
+    ti -- Task Instance (required for Airflow XCOM)
+    """
+
+
     
 
     urls = []
@@ -25,5 +37,7 @@ def get_urls(ti, url, year, month):
         to_pass[dir] = [dir, date, ext, download_url]
 
     ti.xcom_push(key='download_info', value = to_pass)
+
+    return None
     
    
