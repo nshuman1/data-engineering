@@ -1,29 +1,15 @@
-import os
-import pyarrow.parquet as pq
-import requests
-from bs4 import BeautifulSoup
-import re
-
-
-from datetime import datetime
-
 from airflow import DAG
-from airflow.utils.dates import days_ago
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 
-from google.cloud import storage
+from random import uniform
+from datetime import datetime
+import os
+import urllib.request
+from get_urls import get_urls
+from upload_to_gcs import process_xcom_for_gcs_upload
+from collections import defaultdict
 
-import pyarrow.csv as pv
-import pyarrow.parquet as pq
-
-from curl_taxi_data import download_taxi_data
-
-LINK = "https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page"
-
-PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
-BUCKET = os.environ.get("GCP_GCS_BUCKET")
-AIRFLOW_HOME = os.environ.get("AIRFLOW_HOME", "/opt/airflow/")
 
 
 default_args = {
@@ -33,43 +19,98 @@ default_args = {
     "retries": 1,
 }
 
+LINK = "https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page"
+BUCKET_NAME = 'levant-data-lake_nyc-taxi-dwh'
 
-def download_data_dag(
-    dag,
-    url,
-    destination_path
-):
-    with dag:
-        download_dataset_task = PythonOperator(
-            task_id="download_dataset_task",
-            python_callable=download_taxi_data,
-            op_kwargs={
-                "url" : url,
-                "year" : "{{ execution_date.strftime(\'%Y\') }}",
-                "month" : "{{ execution_date.strftime(\'%m\') }}",
-                "destination" : destination_path
-            }
-        )
+# def _get_urls(ti, url, year, month):
+#     urls = []
+#     page = requests.get(url)
+#     soup = BeautifulSoup(page.text, 'html.parser')
 
-        download_dataset_task 
+#     for link in soup.find_all('a'):
+#         urls.append(link.get('href'))
+
+#     dataset_regex = re.compile('.tripdata_' + year + '-' + month + '.[a-z]*')
+#     url_regex = re.compile('([a-z]*_[a-z]*)_(\d{4}-\d{2})(.parquet)')
+
+#     links=list(filter(dataset_regex.search, urls))
+#     to_pass = defaultdict()
+
+#     for download_url in links:
+#         result = re.search(url_regex, download_url)
+#         dir, date, ext = result.groups()
+#         to_pass[dir] = [dir, date, ext, download_url]
+
+#     ti.xcom_push(key='download_info', value = to_pass)
+        
+
+def _download_files(ti):
+    '''
+    Reads a dictionary containing a subject as a key, and a list stored as the value pair containing the following:
+        list[0] = ******@@@@@*****  -- TO-DO: populate this description based on whether this function will be for NY taxi only
+        list[1] = YYYY-MM
+        list[2] = file extension
+        list[4] = url to download file
+    Utilizes unpacked list values to set a path and filename before downloading the files and saving them to the local machine.
+
+    '''
+
+    
+    download_info = ti.xcom_pull(key='download_info', task_ids='get_url')
+    source_dest_gcs = defaultdict()    
+
+    for k,v in download_info.items():
+        taxi_type = v[0]
+        year_month = v[1]
+        file_ext = v[2]
+        url = v[3]
+
+        parent_dir = os.path.abspath(os.path.join(os.path.join(os.path.dirname(__file__), '..'), taxi_type))
+        file_name = f'{taxi_type}_{year_month}{file_ext}'
+        dest = os.path.join(parent_dir, file_name)
+        os.makedirs(parent_dir, exist_ok=True)
+            
+        urllib.request.urlretrieve(url, dest)
+        source_dest_gcs[file_name] = { 'source' : dest, 'dest' : f'{taxi_type}/{taxi_type}_{year_month}{file_ext}' }
+
+    ti.xcom_push(key='gcs_path', value = source_dest_gcs)
 
 
 
-TAXI_DEST_FILE = AIRFLOW_HOME + "/nyc_taxi_{{ execution_date.strftime(\'%Y-%m\') }}.parquet"
-
-levant_nyc_taxi_data = DAG(
-    dag_id="download_taxi_data",
+with DAG('nyc_taxi_dag', 
     schedule_interval="0 6 2 * *",
-    start_date=datetime(2019, 1, 1),
     default_args=default_args,
-    catchup=True,
-    max_active_runs=3,
-    tags=['levant-de'],
-)
+    start_date=datetime(2022, 4, 1),
+    catchup=True) as dag:
 
-download_data_dag(
-    dag=levant_nyc_taxi_data,
-    url = LINK,
-    destination_path=TAXI_DEST_FILE
-)
+    downloading_data = BashOperator(
+        task_id='downloading_data',
+        bash_command='sleep 3',
+        do_xcom_push=False
+    )
 
+    get_url = PythonOperator(
+            task_id='get_url',
+            python_callable = get_urls,
+            op_kwargs = {
+                "url" : LINK,
+                "year" : "{{ execution_date.strftime(\'%Y\') }}",
+                "month" : "{{ execution_date.strftime(\'%m\') }}"
+            }
+    )
+     
+
+    download_files = PythonOperator(
+        task_id='download_files',
+        python_callable=_download_files
+    )
+
+    local_to_gcs = PythonOperator(
+        task_id = 'local_to_gcs',
+        python_callable = process_xcom_for_gcs_upload,
+        op_kwargs = {
+            "bucket_name" : BUCKET_NAME
+        }
+    )
+
+    downloading_data >> get_url >> download_files >> local_to_gcs
