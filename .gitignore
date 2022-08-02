@@ -5,4 +5,5 @@ Scripts/
 venv/
 test.py
 airflow/logs/
-Untitled.ipynb
+.idea/
+airflow/dags/__pycache__/
