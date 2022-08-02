@@ -1,5 +1,6 @@
 import os
 import urllib.request
+from collections import defaultdict
 
 def download_files(ti) -> None:
     '''

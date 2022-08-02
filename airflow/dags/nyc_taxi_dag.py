@@ -12,9 +12,6 @@ from get_weather import get_weather_data
 from download_files import download_files
 
 
-
-
-
 default_args = {
     "owner": "airflow",
     #"start_date": days_ago(1),
