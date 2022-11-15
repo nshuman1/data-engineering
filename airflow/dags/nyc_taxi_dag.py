@@ -6,11 +6,9 @@ from datetime import datetime
 
 
 from get_urls import get_urls
-from upload_to_gcs import process_xcom_for_gcs_upload
-from upload_to_gcs import upload_blob
 from get_weather import get_weather_data
 from download_files import download_files
-
+from load_postgres import load_postgres
 
 default_args = {
     "owner": "airflow",
@@ -54,33 +52,30 @@ with DAG('nyc_taxi_dag',
     )
 
     local_to_gcs = PythonOperator(
-        task_id = 'local_to_gcs',
-        python_callable = process_xcom_for_gcs_upload,
-        op_kwargs = {
-            "bucket_name" : BUCKET_NAME
-        }
+        task_id = 'load_postgres',
+        python_callable = load_postgres
     )
 
-    get_weather = PythonOperator(
-        task_id='get_weather',
-        python_callable = get_weather_data,
-        op_kwargs = {
-            "year" : "{{ execution_date.strftime(\'%Y\') }}",
-            "month" : "{{ execution_date.strftime(\'%m\') }}"
-        }
-    )
+    # get_weather = PythonOperator(
+    #     task_id='get_weather',
+    #     python_callable = get_weather_data,
+    #     op_kwargs = {
+    #         "year" : "{{ execution_date.strftime(\'%Y\') }}",
+    #         "month" : "{{ execution_date.strftime(\'%m\') }}"
+    #     }
+    # )
 
-    upload_weather = PythonOperator(
-        task_id='upload_weather_gcs',
-        python_callable = upload_blob,
-        op_kwargs = {
-            "bucket_name" : BUCKET_NAME,
-            "source_file_name" : 'weather_nyc_{{ execution_date.strftime(\'%Y\') }}_{{ execution_date.strftime(\'%m\') }}.json',
-            "destination_blob_name" : "weather/weather_nyc_{{ execution_date.strftime(\'%Y\') }}_{{ execution_date.strftime(\'%m\') }}.json"
-        }
-    )
+    # upload_weather = PythonOperator(
+    #     task_id='upload_weather_gcs',
+    #     python_callable = upload_blob,
+    #     op_kwargs = {
+    #         "bucket_name" : BUCKET_NAME,
+    #         "source_file_name" : 'weather_nyc_{{ execution_date.strftime(\'%Y\') }}_{{ execution_date.strftime(\'%m\') }}.json',
+    #         "destination_blob_name" : "weather/weather_nyc_{{ execution_date.strftime(\'%Y\') }}_{{ execution_date.strftime(\'%m\') }}.json"
+    #     }
+    # )
 
     downloading_data >> get_url >> download_from_url >> local_to_gcs
 
-    get_weather >> upload_weather
+    # get_weather >> upload_weather
     

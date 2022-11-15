@@ -1,4 +1,9 @@
 from google.cloud import storage
+import argparse
+import os
+import pyarrow.parquet as pq
+import pandas as pd
+from sqlalchemy import create_engine
 
 
 def process_xcom_for_gcs_upload(ti, bucket_name):
@@ -16,6 +21,32 @@ def process_xcom_for_gcs_upload(ti, bucket_name):
         upload_blob(bucket_name, source, dest)
         
 
+
+
+
+
+
+def load_postgres(ti):
+    user = params.user
+    password = params.password
+    host = params.host 
+    port = params.port 
+    db = params.db
+    table_name = params.table_name
+    url = params.url
+    filename = filename
+    
+    # cd 
+    ti.xcom_pull(key = 'path', task_ids='download_files')
+
+    engine = create_engine('postgresql://root:root@pgdatabase:5432/ny_taxi')
+
+    for i in range(len(li))
+    
+    parquet_table = pq.read_table(filename)
+    df = parquet_table.to_pandas()
+
+    df.to_sql(name="yellow_taxi_trips", con=engine, if_exists='append', chunksize=100000)
     
     
 def upload_blob(bucket_name: str, source_file_name: str, destination_blob_name: str) -> None:

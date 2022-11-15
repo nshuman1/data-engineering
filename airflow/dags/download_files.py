@@ -16,7 +16,7 @@ def download_files(ti) -> None:
 
     
     download_info = ti.xcom_pull(key='download_info', task_ids='get_url')
-    source_dest_gcs = defaultdict()    
+    source_dest = defaultdict()    
 
     for k,v in download_info.items():
         taxi_type = v[0]
@@ -30,8 +30,10 @@ def download_files(ti) -> None:
         os.makedirs(parent_dir, exist_ok=True)
             
         urllib.request.urlretrieve(url, dest)
-        source_dest_gcs[file_name] = { 'source' : dest, 'dest' : f'{taxi_type}/{taxi_type}_{year_month}{file_ext}' }
+        
+        source_dest[file_name] = { 'source' : dest, 'dest' : taxi_type,
+                                 'date' : year_month, 'ext' : file_ext }
 
-    ti.xcom_push(key='gcs_path', value = source_dest_gcs)
+    ti.xcom_push(key='path', value = source_dest)
     
     return None
