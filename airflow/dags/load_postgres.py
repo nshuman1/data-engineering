@@ -4,6 +4,7 @@ import os
 import pyarrow.parquet as pq
 import pandas as pd
 from sqlalchemy import create_engine
+import pyarrow.dataset as ds
 
 
 def load_postgres(ti):
@@ -19,16 +20,20 @@ def load_postgres(ti):
     
     path = ti.xcom_pull(key = 'path', task_ids='download_files')
 
-    engine = create_engine('postgresql://root:root@pgdatabase:5432/ny_taxi')
+    engine = create_engine('postgresql://root:root@database-pgdatabase-1:5432/ny_taxi')
 
     for i in range(len(list(path.keys()))):
         filename = (path[list(path.keys())[i]]['source'])
         dest = (path[list(path.keys())[i]]['dest'])
     
-        parquet_table = pq.read_table(filename)
-        df = parquet_table.to_pandas()
+        dataset = ds.dataset(filename, format='parquet')
+        
+        for batch in dataset.to_batches(batch_size=10_000):
+            df = batch.to_pandas()
+            df.to_sql(name = dest, con = engine, if_exists = 'append')
+            print("Processed 10,000 rows successfully.")
+            del df
 
-        df.to_sql(name = dest, con = engine, if_exists = 'append', chunksize = 100000)
-
+    del dataset
 
     return None

@@ -24,7 +24,7 @@ def download_files(ti) -> None:
         file_ext = v[2]
         url = v[3]
 
-        parent_dir = os.path.abspath(os.path.join(os.path.join(os.path.dirname(__file__), '..'), taxi_type))
+        parent_dir = os.path.abspath(os.path.join(os.path.join(os.path.dirname(__file__), '..'), f'data/{taxi_type}'))
         file_name = f'{taxi_type}_{year_month}{file_ext}'
         dest = os.path.join(parent_dir, file_name)
         os.makedirs(parent_dir, exist_ok=True)

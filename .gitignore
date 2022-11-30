@@ -9,3 +9,4 @@ airflow/logs/
 airflow/dags/__pycache__/
 test_dev/
 database/
+airflow/data/

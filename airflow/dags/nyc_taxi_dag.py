@@ -9,6 +9,10 @@ from get_urls import get_urls
 from get_weather import get_weather_data
 from download_files import download_files
 from load_postgres import load_postgres
+from create_yellow_primary_key import yellow_key_gen
+from create_green_primary_key import green_key_gen
+from create_fhvhv_primary_key import fhvhv_key_gen
+from create_fhv_primary_key import fhv_key_gen
 
 default_args = {
     "owner": "airflow",
@@ -26,8 +30,9 @@ BUCKET_NAME = 'levant-data-lake_nyc-taxi-dwh'
 with DAG('nyc_taxi_dag', 
     schedule_interval="0 6 2 * *",
     default_args=default_args,
-    start_date=datetime(2022, 4, 1),
-    catchup=True) as dag:
+    start_date=datetime(2020, 8, 1),
+    catchup=True,
+    concurrency=6) as dag:
 
     downloading_data = BashOperator(
         task_id='downloading_data',
@@ -48,10 +53,50 @@ with DAG('nyc_taxi_dag',
 
     download_from_url = PythonOperator(
         task_id='download_files',
-        python_callable=download_files
+        python_callable = download_files
     )
 
-    local_to_gcs = PythonOperator(
+    create_yellow_key = PythonOperator(
+        task_id='create_yellow_key',
+        python_callable= yellow_key_gen,
+        op_kwargs = {
+            "year" : "{{ execution_date.strftime(\'%Y\') }}",
+            "month" : "{{ execution_date.strftime(\'%m\') }}"
+        }
+
+    )
+
+    create_green_key = PythonOperator(
+        task_id='create_green_key',
+        python_callable= green_key_gen,
+        op_kwargs = {
+            "year" : "{{ execution_date.strftime(\'%Y\') }}",
+            "month" : "{{ execution_date.strftime(\'%m\') }}"
+        }
+
+    )
+
+    create_fhvhv_key = PythonOperator(
+        task_id='create_fhvhv_key',
+        python_callable= fhvhv_key_gen,
+        op_kwargs = {
+            "year" : "{{ execution_date.strftime(\'%Y\') }}",
+            "month" : "{{ execution_date.strftime(\'%m\') }}"
+        }
+
+    )
+
+    create_fhv_key = PythonOperator(
+        task_id='create_fhv_key',
+        python_callable= fhv_key_gen,
+        op_kwargs = {
+            "year" : "{{ execution_date.strftime(\'%Y\') }}",
+            "month" : "{{ execution_date.strftime(\'%m\') }}"
+        }
+
+    )
+
+    load_db = PythonOperator(
         task_id = 'load_postgres',
         python_callable = load_postgres
     )
@@ -75,7 +120,7 @@ with DAG('nyc_taxi_dag',
     #     }
     # )
 
-    downloading_data >> get_url >> download_from_url >> local_to_gcs
+    downloading_data >> get_url >> download_from_url >> [create_yellow_key, create_green_key, create_fhv_key, create_fhvhv_key ] >> load_db
 
     # get_weather >> upload_weather
     
