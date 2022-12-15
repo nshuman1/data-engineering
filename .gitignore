@@ -10,3 +10,4 @@ airflow/dags/__pycache__/
 test_dev/
 database/
 airflow/data/
+test_file.parquet
