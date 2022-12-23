@@ -13,3 +13,5 @@ airflow/data/
 test_file.parquet
 .vscode/settings.json
 airflow/dags/common/operators/__pycache__/
+airflow/dags/common/data/
+airflow/.env

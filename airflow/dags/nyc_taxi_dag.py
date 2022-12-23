@@ -2,6 +2,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 from datetime import datetime
+import os
 
 
 from common.operators.get_urls import get_urls
@@ -28,6 +29,14 @@ LINK = "https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page"
 
 BUCKET_NAME = "levant-data-lake_nyc-taxi-dwh"
 
+# For Local (Postgres) DB Only
+
+PG_HOST = os.getenv("PG_HOST")
+PG_USER = os.getenv("PG_USER")
+PG_PASSWORD = os.getenv("PG_PASSWORD")
+PG_PORT = os.getenv("PG_PORT")
+PG_DATABASE = os.getenv("PG_DATABASE")
+
 # DAG Documentation
 
 doc_md = """
@@ -41,7 +50,7 @@ with DAG(
     schedule_interval="0 6 2 * *",
     default_args=default_args,
     doc_md=doc_md,
-    start_date=datetime(2020, 8, 1),
+    start_date=datetime(2022, 8, 1),
     catchup=True,
     concurrency=6,
 ) as dag:
@@ -121,7 +130,18 @@ with DAG(
         },
     )
 
-    load_db = PythonOperator(task_id="load_postgres", python_callable=load_postgres)
+    load_db = PythonOperator(
+        task_id="load_postgres",
+        python_callable=load_postgres,
+        op_kwargs={
+            "host": PG_HOST,
+            "db": PG_DATABASE,
+            "user": PG_USER,
+            "pw": PG_PASSWORD,
+            "port": PG_PORT,
+        },
+    )
+
     # Weather tasks turned off due to API Limits
 
     """get_weather = PythonOperator(

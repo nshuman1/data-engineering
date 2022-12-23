@@ -1,4 +1,4 @@
-def load_postgres(ti):
+def load_postgres(ti, host, db, user, pw, port):
     """
     Function that reads a parquet file into a pyarrow dataset. The dataset is then split into batches with a size of 10,000.
     Each batch is then converted to a pandas dataframe via the pyarrow dataset pandas api. The pandas to_sql api call is then invoked to load the data
@@ -8,6 +8,11 @@ def load_postgres(ti):
 
     Inputs:
         ti -- Task Instance (required for Airflow XCOM)
+        host (str) -- Database host name 
+        db (str) -- Database name
+        user (str) -- Database username
+        pw (str) -- Database user password
+        port (str) -- Database port
 
     Example Inputs (passed via airflow):
 
@@ -25,7 +30,7 @@ def load_postgres(ti):
 
     path = ti.xcom_pull(key="source_dest_paths", task_ids="download_files")
 
-    engine = create_engine("postgresql://root:root@database-pgdatabase-1:5432/ny_taxi")
+    engine = create_engine(f"postgresql://{user}:{pw}@{host}:{port}/{db}")
 
     for i in range(len(list(path.keys()))):
         filename = path[list(path.keys())[i]]["source"]
