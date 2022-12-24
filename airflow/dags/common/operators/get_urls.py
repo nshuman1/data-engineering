@@ -1,7 +1,7 @@
 # get_urls.py
 
 
-def get_urls(ti, url: str, year: str, month: str) -> None:
+def get_urls(ti, url: str, year: str, month: str, dataset: str) -> None:
     """
     Function to scrape NYC Taxi data page for data associated to downloadable parquet files.
     The function constructs a dictionary which is pushed to downstream tasks via Airflow XCOM.
@@ -40,16 +40,27 @@ def get_urls(ti, url: str, year: str, month: str) -> None:
     for link in soup.find_all("a"):
         urls.append(link.get("href"))
 
+    # regex used controlled by dataset argument
+
     dataset_regex = re.compile(".tripdata_" + year + "-" + month + ".[a-z]*")
     url_regex = re.compile("([a-z]*_[a-z]*)_(\d{4}-\d{2})(.parquet)")
+    zones_regex = re.compile("taxi\+_zone_lookup.csv")
 
-    links = list(filter(dataset_regex.search, urls))
-    download_info = defaultdict()
+    if dataset == "trips":
 
-    for download_url in links:
-        result = re.search(url_regex, download_url)
-        dir, date, ext = result.groups()
-        download_info[dir] = [dir, date, ext, download_url]
+        links = list(filter(dataset_regex.search, urls))
+        download_info = defaultdict()
+
+        for download_url in links:
+            result = re.search(url_regex, download_url)
+            dir, date, ext = result.groups()
+            download_info[dir] = [dir, date, ext, download_url]
+    else:
+        links = list(filter(zones_regex.search, urls))
+
+        for download_url in links:
+            dir, date, ext = "zones", "", ".csv"
+            download_info[dir] = [dir, date, ext, download_url]
 
     ti.xcom_push(key="download_info", value=download_info)
 

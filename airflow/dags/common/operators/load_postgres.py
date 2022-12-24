@@ -8,7 +8,7 @@ def load_postgres(ti, host, db, user, pw, port):
 
     Inputs:
         ti -- Task Instance (required for Airflow XCOM)
-        host (str) -- Database host name 
+        host (str) -- Database host name
         db (str) -- Database name
         user (str) -- Database username
         pw (str) -- Database user password
