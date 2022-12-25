@@ -39,6 +39,10 @@ PG_DATABASE = os.getenv("PG_DATABASE")
 
 # DAG Documentation
 
+year = "{{ execution_date.strftime('%Y') }}"
+month =  "{{ execution_date.strftime('%m') }}"
+
+
 doc_md = """
 ### NYC Taxi Dag
 #### Purpose
@@ -60,8 +64,7 @@ with DAG(
         python_callable=get_urls,
         op_kwargs={
             "url": LINK,
-            "year": "{{ execution_date.strftime('%Y') }}",
-            "month": "{{ execution_date.strftime('%m') }}",
+            "regex": f'([a-z]*_[a-z]*)_({year}-{month})(\.[a-z]*)'
         },
     )
 

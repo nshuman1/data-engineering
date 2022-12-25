@@ -30,13 +30,15 @@ def load_postgres(ti, host, db, user, pw, port):
 
     path = ti.xcom_pull(key="source_dest_paths", task_ids="download_files")
 
+    file_format = path[list(path.keys())[0]]['ext'].replace(".", "")
+
     engine = create_engine(f"postgresql://{user}:{pw}@{host}:{port}/{db}")
 
     for i in range(len(list(path.keys()))):
         filename = path[list(path.keys())[i]]["source"]
         dest = path[list(path.keys())[i]]["dest"]
 
-        dataset = ds.dataset(filename, format="parquet")
+        dataset = ds.dataset(filename, format=file_format)
 
         for batch in dataset.to_batches(batch_size=10_000):
             df = batch.to_pandas()
