@@ -1,4 +1,4 @@
-def load_postgres(ti, host, db, user, pw, port):
+def load_postgres(ti, host: str, db: str, user: str, pw: str, port: str, if_exists: str):
     """
     Function that reads a parquet file into a pyarrow dataset. The dataset is then split into batches with a size of 10,000.
     Each batch is then converted to a pandas dataframe via the pyarrow dataset pandas api. The pandas to_sql api call is then invoked to load the data
@@ -42,8 +42,8 @@ def load_postgres(ti, host, db, user, pw, port):
 
         for batch in dataset.to_batches(batch_size=10_000):
             df = batch.to_pandas()
-            df.to_sql(name=dest, con=engine, if_exists="append")
-            print("Processed 10,000 rows successfully.")
+            df.to_sql(name = dest, con = engine, if_exists = if_exists)
+            print("Processed up to  10,000 rows successfully.")
             del df
 
     del dataset

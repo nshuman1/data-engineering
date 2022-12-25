@@ -142,7 +142,8 @@ with DAG(
             "user": PG_USER,
             "pw": PG_PASSWORD,
             "port": PG_PORT,
-        },
+            "if_exists": "append",                
+            },
     )
 
     # Weather tasks turned off due to API Limits

@@ -63,7 +63,23 @@ with DAG(
         task_id="download_files", python_callable=download_files
     )
 
+    load_db = PythonOperator(
+        task_id="load_postgres",
+        python_callable=load_postgres,
+        op_kwargs={
+            "host": PG_HOST,
+            "db": PG_DATABASE,
+            "user": PG_USER,
+            "pw": PG_PASSWORD,
+            "port": PG_PORT,
+            "if_exists": "replace"
+        },
+
+    )
+
+
+
     (
-            get_url >> download_from_url
+            get_url >> download_from_url >> load_db
 
             )
